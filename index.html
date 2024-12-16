@@ -1,330 +1,100 @@
-<!DOCTYPE html>
-<html lang="en">
+let selectedFiles = [];
+let batches = [];
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bulk Image Resize Tool</title>
-    <style>
-        /* General Reset */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+// Handle file selection
+function handleFileInput(event) {
+    selectedFiles = Array.from(event.target.files);
+    if (selectedFiles.length > 0) {
+        resizeBtn.disabled = false;
+    } else {
+        resizeBtn.disabled = true;
+    }
+    displaySelectedImages();
+}
 
-        /* Body Styling */
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #e4e9f1;
-            color: #333;
-            line-height: 1.6;
-            padding: 0;
-            margin: 0;
-        }
+// Split files into batches of 50
+function splitIntoBatches(files) {
+    batches = [];
+    for (let i = 0; i < files.length; i += 50) {
+        batches.push(files.slice(i, i + 50));
+    }
+}
 
-        /* Navigation Bar */
-        nav {
-            background-color: #2b3e50;
-            color: #fff;
-            padding: 20px;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
+// Display selected images before resizing
+function displaySelectedImages() {
+    output.innerHTML = '';
+    selectedFiles.forEach((file) => {
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(file);
+        img.alt = file.name;
+        img.style.width = '100px'; // Display smaller preview size
+        output.appendChild(img);
+    });
+}
 
-        nav ul {
-            list-style: none;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
+// Resize images
+function resizeImages() {
+    splitIntoBatches(selectedFiles); // Split selected files into batches
+    batches.forEach((batch, batchIndex) => {
+        const resizedImages = [];
+        let processedCount = 0;
 
-        nav ul li {
-            margin: 0 25px;
-        }
+        batch.forEach((file) => {
+            const img = new Image();
+            const reader = new FileReader();
 
-        nav ul li a {
-            color: #fff;
-            text-decoration: none;
-            font-size: 18px;
-            font-weight: 600;
-            text-transform: uppercase;
-            padding: 5px 15px;
-            transition: all 0.3s ease;
-        }
+            reader.onload = function(event) {
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
 
-        nav ul li a:hover {
-            background-color: #1abc9c;
-            border-radius: 25px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        }
+                    const targetWidth = 250;
+                    const targetHeight = 320;
 
-        /* Hero Section */
-        .hero {
-            background: linear-gradient(135deg, #1abc9c, #16a085);
-            color: white;
-            text-align: center;
-            padding: 100px 20px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-        }
+                    canvas.width = targetWidth;
+                    canvas.height = targetHeight;
+                    ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
 
-        .hero h1 {
-            font-size: 50px;
-            font-weight: bold;
-            margin-bottom: 20px;
-            text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
-        }
-
-        .hero p {
-            font-size: 22px;
-            margin-bottom: 30px;
-            font-weight: 300;
-        }
-
-        .hero button {
-            padding: 15px 35px;
-            font-size: 18px;
-            background-color: #fff;
-            color: #1abc9c;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .hero button:hover {
-            background-color: #16a085;
-            color: white;
-            transform: translateY(-3px);
-            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
-        }
-
-        /* Container for Content */
-        .container {
-            max-width: 900px;
-            margin: 50px auto;
-            background-color: #fff;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
-            text-align: center;
-        }
-
-        /* Input & Buttons */
-        input[type="file"] {
-            margin: 20px 0;
-            padding: 15px;
-            font-size: 16px;
-            background-color: #16a085;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            width: 80%;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        input[type="file"]:hover {
-            background-color: #1abc9c;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
-        }
-
-        .resize-btn, .download-btn {
-            padding: 15px 30px;
-            background-color: #1abc9c;
-            color: white;
-            font-size: 16px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            margin-top: 30px;
-            transition: all 0.3s ease;
-            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .resize-btn:hover, .download-btn:hover {
-            background-color: #16a085;
-            transform: translateY(-3px);
-            box-shadow: 0 7px 18px rgba(0, 0, 0, 0.2);
-        }
-
-        .resize-btn:disabled, .download-btn:disabled {
-            background-color: #7f8c8d;
-            cursor: not-allowed;
-        }
-
-        /* Output Section */
-        .output {
-            display: flex;
-            justify-content: center;
-            flex-wrap: wrap;
-            margin-top: 30px;
-        }
-
-        .output img {
-            margin: 10px;
-            border-radius: 8px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-            transition: all 0.3s ease;
-        }
-
-        .output img:hover {
-            transform: scale(1.05);
-            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
-        }
-
-        /* Footer */
-        footer {
-            background-color: #2b3e50;
-            color: #fff;
-            padding: 20px;
-            text-align: center;
-            margin-top: 40px;
-            box-shadow: 0 -4px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        /* Responsive Design */
-        @media (max-width: 768px) {
-            .container {
-                width: 85%;
-            }
-
-            .resize-btn, .download-btn {
-                width: 100%;
-            }
-
-            input[type="file"] {
-                width: 90%;
-            }
-        }
-
-    </style>
-</head>
-
-<body> 
-
-    <!-- Hero Section -->
-    <section class="hero">
-        <div class="container">
-            <h1 style="color: black;">Resize and download multiple images in bulk</h1> 
-            <input type="file" id="fileInput" multiple accept="image/*">
-            <button class="resize-btn" id="resizeBtn" disabled>Resize Images</button>
-            <button class="download-btn" id="downloadBtn" disabled>Download ZIP</button>
-        </div>
-
-        <div class="output" id="output"></div>
-    </section>
-
-    <!-- Footer -->
-    <footer>
-        <p>&copy; 2024 Img Resizer Tool. All rights reserved. <a href="https://ravimanivel.github.io/websites/" style="color: white;"> Developed by Ravi M.</a></p>
-    </footer>
- 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.8.0/jszip.min.js"></script>
-    <script >// Get elements from the DOM
-        const fileInput = document.getElementById('fileInput');
-        const resizeBtn = document.getElementById('resizeBtn');
-        const downloadBtn = document.getElementById('downloadBtn');
-        const output = document.getElementById('output');
-        
-        let selectedFiles = [];
-        
-        // Add event listeners
-        fileInput.addEventListener('change', handleFileInput);
-        resizeBtn.addEventListener('click', resizeImages);
-        downloadBtn.addEventListener('click', downloadZip);
-        
-        // Handle file selection
-        function handleFileInput(event) {
-            selectedFiles = Array.from(event.target.files);
-            if (selectedFiles.length > 0) {
-                resizeBtn.disabled = false;
-            } else {
-                resizeBtn.disabled = true;
-            }
-            displaySelectedImages();
-        }
-        
-        // Display selected images before resizing
-        function displaySelectedImages() {
-            output.innerHTML = '';
-            selectedFiles.forEach((file) => {
-                const img = document.createElement('img');
-                img.src = URL.createObjectURL(file);
-                img.alt = file.name;
-                img.style.width = '100px'; // Display smaller preview size
-                output.appendChild(img);
-            });
-        }
-        
-        // Resize images
-        function resizeImages() {
-            const resizedImages = [];
-            selectedFiles.forEach(file => {
-                const img = new Image();
-                const reader = new FileReader();
-        
-                reader.onload = function(event) {
-                    img.onload = function() {
-                        const canvas = document.createElement('canvas');
-                        const ctx = canvas.getContext('2d');
-        
-                        // Set the canvas size to the desired image size
-                        const targetWidth = 250;
-                        const targetHeight = 320;
-        
-                        // Resize the image
-                        canvas.width = targetWidth;
-                        canvas.height = targetHeight;
-                        ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
-        
-                        // Compress and get the resized image as a Blob
-                        canvas.toBlob((blob) => {
-                            const newImg = document.createElement('img');
-                            newImg.src = URL.createObjectURL(blob);
-                            newImg.style.width = '100px'; // Display resized preview
-        
-                            // Show resized image
-                            output.appendChild(newImg);
-        
-                            // Store the resized image as a file in the zip
+                    canvas.toBlob(
+                        (blob) => {
                             resizedImages.push({ name: file.name, blob: blob });
-                        }, 'image/jpeg', 0.8); // Adjust the quality to try and reduce file size
-                    };
-                    img.src = event.target.result;
+                            processedCount++;
+                            if (processedCount === batch.length) {
+                                createZip(resizedImages, batchIndex + 1); // Create ZIP for this batch
+                            }
+                        },
+                        'image/jpeg',
+                        0.8
+                    );
                 };
-        
-                reader.readAsDataURL(file);
-            });
-        
-            // Enable the download button after resizing is done
-            downloadBtn.disabled = false;
-        
-            // Store resized images in the global variable for later download
-            window.resizedImages = resizedImages;
-        }
-        
-        // Download the resized images as a ZIP file
-        function downloadZip() {
-            const zip = new JSZip();
-            const folder = zip.folder('resized_images');
-        
-            window.resizedImages.forEach((image, index) => {
-                // Add each resized image as a file in the zip
-                folder.file(image.name, image.blob);
-            });
-        
-            // Generate the ZIP file and offer it for download
-            zip.generateAsync({ type: 'blob' }).then(function(content) {
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(content);
-                link.download = 'resized_images.zip';
-                link.click();
-            });
-        }
-        </script>
-</body>
-</html>
+                img.src = event.target.result;
+            };
+
+            reader.readAsDataURL(file);
+        });
+    });
+}
+
+// Create a ZIP for a batch and provide a download link
+function createZip(images, batchNumber) {
+    const zip = new JSZip();
+    const folder = zip.folder('resized_images_batch_' + batchNumber);
+
+    images.forEach((image) => {
+        folder.file(image.name, image.blob);
+    });
+
+    zip.generateAsync({ type: 'blob' }).then(function(content) {
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(content);
+        link.download = `resized_images_batch_${batchNumber}.zip`;
+        link.textContent = `Download Batch ${batchNumber}`;
+        link.style.display = 'block';
+        link.style.marginTop = '10px';
+        output.appendChild(link);
+    });
+}
+
+// Event listeners
+fileInput.addEventListener('change', handleFileInput);
+resizeBtn.addEventListener('click', resizeImages);
